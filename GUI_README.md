@@ -4,19 +4,7 @@ A user-friendly graphical interface for detecting code smells in Java source fil
 
 ## 🚀 Quick Start
 
-### Method 1: Python Launcher (Recommended)
-```bash
-cd code-smell-detector
-python launch_gui.py
-```
-
-### Method 2: Batch File (Windows)
-```bash
-cd code-smell-detector
-run_gui.bat
-```
-
-### Method 3: Direct Execution
+### Method: Direct Execution
 ```bash
 cd code-smell-detector/src
 python detector_gui.py
