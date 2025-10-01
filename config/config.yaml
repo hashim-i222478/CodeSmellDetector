@@ -1,0 +1,42 @@
+# Code Smell Detector Configuration
+# Enable/disable specific code smell detectors
+
+code_smells:
+  LongMethod:
+    enabled: true
+    threshold_lines: 30  # Methods longer than this are considered long
+  
+  GodClass:
+    enabled: true
+    threshold_methods: 15  # Classes with more methods than this are considered god classes
+    threshold_lines: 200   # Classes longer than this are considered god classes
+  
+  DuplicatedCode:
+    enabled: true
+    min_duplicate_lines: 3  # Minimum lines for duplicate detection
+    similarity_threshold: 0.8  # How similar code blocks need to be (0.0-1.0)
+  
+  LargeParameterList:
+    enabled: true
+    threshold_parameters: 5  # Methods with more parameters than this are flagged
+  
+  MagicNumbers:
+    enabled: true
+    exclude_common: true  # Exclude common numbers like 0, 1, -1, 2
+    exclude_constants: true  # Exclude final/static variables
+  
+  FeatureEnvy:
+    enabled: true
+    external_calls_threshold: 5  # Methods calling other classes more than this
+
+# Output settings
+output:
+  format: "detailed"  # Options: detailed, summary, json
+  include_line_numbers: true
+  include_suggestions: true
+
+# File patterns
+analysis:
+  file_extensions: [".java"]
+  exclude_patterns: ["*Test.java", "*test.java"]
+  include_patterns: ["*.java"]
