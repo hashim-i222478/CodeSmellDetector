@@ -44,32 +44,76 @@ class DuplicatedCodeDetector(BaseDetector):
         return smells
     
     def _find_duplicates(self, lines: List[str], line_mapping: List[int], min_lines: int, threshold: float) -> List[dict]:
-        duplicates = []
-        processed_blocks = set()
-        
-        for i in range(len(lines) - min_lines + 1):
+        duplicates: List[dict] = []
+        processed_blocks: Set[Tuple[str, ...]] = set()
+        covered: List[Tuple[int, int]] = []  # inclusive [s, e] in `lines`
+
+        def overlaps(a: Tuple[int,int], b: Tuple[int,int]) -> bool:
+            return not (a[1] < b[0] or b[1] < a[0])
+
+        n = len(lines)
+        for i in range(n - min_lines + 1):
+            left_win = (i, i + min_lines - 1)
+            if any(overlaps(left_win, c) for c in covered):
+                continue
+
             block1 = lines[i:i + min_lines]
             block1_key = tuple(block1)
-            
             if block1_key in processed_blocks:
                 continue
-            
-            for j in range(i + min_lines, len(lines) - min_lines + 1):
+
+            j = i + min_lines
+            while j <= n - min_lines:
+                right_win = (j, j + min_lines - 1)
+                if any(overlaps(right_win, c) for c in covered):
+                    j += 1
+                    continue
+
                 block2 = lines[j:j + min_lines]
-                
                 similarity = self._calculate_similarity(block1, block2)
                 if similarity >= threshold:
+                    # extend without crossing into j (no overlap)
+                    L = min_lines
+                    while (i + L) < j and (j + L) < n:
+                        if SequenceMatcher(None, lines[i + L], lines[j + L]).ratio() >= 0.99:
+                            L += 1
+                        else:
+                            break
+
+                    # clamp if minimal window touches j
+                    if (i + L - 1) >= j:
+                        L = j - i  # keep left strictly before right
+
+                    # -------- tighten start (NEW) ----------
+                    ti, tj, TL = i, j, L
+                    while TL > min_lines and SequenceMatcher(None, lines[ti], lines[tj]).ratio() < 0.99:
+                        ti += 1
+                        tj += 1
+                        TL -= 1
+                        if (ti + TL - 1) >= tj:
+                            break
+
+                    if TL < min_lines or (ti + TL - 1) >= tj:
+                        j += 1
+                        continue
+                    # --------------------------------------
+
                     duplicates.append({
-                        'start_line': line_mapping[i],
-                        'end_line': line_mapping[i + min_lines - 1],
-                        'similar_start': line_mapping[j],
-                        'similar_end': line_mapping[j + min_lines - 1],
+                        'start_line': line_mapping[ti],
+                        'end_line': line_mapping[ti + TL - 1],
+                        'similar_start': line_mapping[tj],
+                        'similar_end': line_mapping[tj + TL - 1],
                         'similarity': similarity
                     })
+
+                    covered.append((ti, ti + TL - 1))
+                    covered.append((tj, tj + TL - 1))
                     processed_blocks.add(block1_key)
-                    break
-        
+                    break  # move to next i
+                j += 1
+
         return duplicates
+
     
     def _calculate_similarity(self, block1: List[str], block2: List[str]) -> float:
         """Calculate similarity between two code blocks"""
